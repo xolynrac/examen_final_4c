@@ -64,6 +64,25 @@ def create_big_bank_workspace():
         id="postulante",
     )
 
+    jefe_rrh = model.add_person(
+        location=Location.Internal,
+        name="Jefatura de recursos humanos",
+        description="El decisor de generacion de puestos de trabajo y la inicializacion de una nueva convocatoria",
+        id="jefeRrh",
+    )
+    jefe_rrh.tags.add(business_staff_tag)
+    #postulante.interacts_with(
+    #    jefe_rrh, "Asks questions to", technology="Telephone"
+    #)
+
+    comite_evaluador = model.add_person(
+        location=Location.Internal,
+        name="Comite Evaluador",
+        description="Evalua a los postulantes de la convocatoria",
+        id="comiteEvaluador",
+    )
+    comite_evaluador.tags.add(business_staff_tag)
+
     sistema_contratacion_personal = model.add_software_system(
         location=Location.Internal,
         name="Sistema de contratacion",
@@ -75,7 +94,8 @@ def create_big_bank_workspace():
     postulante.uses(
         sistema_contratacion_personal, "Se registra mediante una cuenta temporal. Rinde las evaluaciones"
     )
-
+    jefe_rrh.uses(sistema_contratacion_personal, "Uses")
+    comite_evaluador.uses(sistema_contratacion_personal, "Uses")
     
     mainframe_business_system = model.add_software_system(
         location=Location.Internal,
@@ -93,20 +113,20 @@ def create_big_bank_workspace():
     
     email_system = model.add_software_system(
         location=Location.Internal,
-        name="E-mail System",
+        name="Sistema de correos",
         description="Sistema de correos con Squirrelmail",
         id="email",
-    )
-    sistema_contratacion_personal.uses(
-        destination=email_system,
-        description="Sends e-mail using",
     )
     email_system.tags.add(existing_system_tag)
     email_system.delivers(
         destination=postulante,
         description="Sends e-mails to",
     )
-    
+    sistema_contratacion_personal.uses(
+        destination=email_system,
+        description="Sends e-mail using",
+    )
+     
     portal = model.add_software_system(
         location=Location.Internal,
         name="Portal Institucional",
@@ -117,34 +137,11 @@ def create_big_bank_workspace():
     #portal.uses(mainframe_business_system, "Uses")
     postulante.uses(portal, "Busca oportunidades de trabajo")
     sistema_contratacion_personal.uses(portal, "Uses")
-
-    jefe_rrh = model.add_person(
-        location=Location.Internal,
-        name="Jefatura de recursos humanos",
-        description="El decisor de generacion de puestos de trabajo y la inicializacion de una nueva convocatoria",
-        id="jefeRrh",
-    )
-    jefe_rrh.tags.add(business_staff_tag)
-    jefe_rrh.uses(sistema_contratacion_personal, "Uses")
-    #postulante.interacts_with(
-    #    jefe_rrh, "Asks questions to", technology="Telephone"
-    #)
-
-    comite_evaluador = model.add_person(
-        location=Location.Internal,
-        name="Comite Evaluador",
-        description="Evalua a los postulantes de la convocatoria",
-        id="comiteEvaluador",
-    )
-    comite_evaluador.tags.add(business_staff_tag)
-    comite_evaluador.uses(sistema_contratacion_personal, "Uses")
     
     # containers
     single_page_application = sistema_contratacion_personal.add_container(
         "Single-Page Application",
-        (
-            "Provee la funcionalidad para los postulantes y los business workers."
-        ),
+        "Provee la funcionalidad para los postulantes y los business workers.",
         "Flutter application",
         id="singlePageApplication",
     )
@@ -163,46 +160,46 @@ def create_big_bank_workspace():
     postulante.uses(mobile_app, "Uses")
 
     
-    api_application = sistema_contratacion_personal.add_container(
+    api_application_container = sistema_contratacion_personal.add_container(
         "API Application",
         "Provee los EndPoints via a JSON/HTTPS API.",
         "NestJs - TypeScript",
         id="apiApplication",
     )
-    single_page_application.uses(api_application, "Makes API calls to" "JSON/HTTPS")
-    mobile_app.uses(api_application, "Makes API calls to" "JSON/HTTPS")
+    api_application_container.uses(email_system, "Sends e-mail using", technology="SMTP")
+    single_page_application.uses(api_application_container, "Makes API calls to" "JSON/HTTPS")
+    mobile_app.uses(api_application_container, "Makes API calls to" "JSON/HTTPS")
 
-    postulante_context = sistema_contratacion_personal.add_container(
+    postulante_context_container = sistema_contratacion_personal.add_container(
         "Contexto Postulante",
         "Provee las funcionalidades para manejar el agregado Postulante",
         "Java and Spring MVC",
         id="postulanteContext",
     )
-    postulante_context.tags.add(bounded_context_tag)
-    api_application.uses(postulante_context, "")
+    postulante_context_container.tags.add(bounded_context_tag)
+    api_application_container.uses(postulante_context_container, "")
 
-    convocatoria_context = sistema_contratacion_personal.add_container(
+    convocatoria_context_container = sistema_contratacion_personal.add_container(
         "Contexto Convocatoria",
         "Provee las funcionalidades para manejar el agregado Convoocatoria",
         "Java and Spring MVC",
         id="convocatoriaContext",
     )
-    convocatoria_context.tags.add(bounded_context_tag)
-    api_application.uses(convocatoria_context, "")
+    convocatoria_context_container.tags.add(bounded_context_tag)
+    api_application_container.uses(convocatoria_context_container, "")
 
-    evaluaciones_context = sistema_contratacion_personal.add_container(
+    evaluaciones_context_container = sistema_contratacion_personal.add_container(
         "Contexto Evaliaciones",
         "Provee las funcionalidades para manejar el agregado Evaluaciones",
         "Java and Spring MVC",
         id="evaluacionesContext",
     )
-    evaluaciones_context.tags.add(bounded_context_tag)
-    api_application.uses(evaluaciones_context, "")
-    evaluaciones_context.uses(
+    evaluaciones_context_container.tags.add(bounded_context_tag)
+    evaluaciones_context_container.uses(
         mainframe_business_system,
         "Registra al nuevo personal",
     )
-
+    api_application_container.uses(evaluaciones_context_container, "")
 
     database = sistema_contratacion_personal.add_container(
         "Database",
@@ -212,10 +209,9 @@ def create_big_bank_workspace():
         id="database",
     )
     database.tags.add(database_tag)
-
-    postulante_context.uses(database, "Guarda los postulantes")
-    convocatoria_context.uses(database , "Guarda las convocatorias")
-    evaluaciones_context.uses(database, "Guarda las evaluaciones")
+    postulante_context_container.uses(database, "Guarda los postulantes")
+    convocatoria_context_container.uses(database , "Guarda las convocatorias")
+    evaluaciones_context_container.uses(database, "Guarda las evaluaciones")
 
 
     
@@ -223,9 +219,9 @@ def create_big_bank_workspace():
     #web_application.uses(
     #    single_page_application, "Delivers to the postulantes web browser"
     #)
-    #api_application.uses(database, "Reads from and writes to", technology="JDBC")
-    #api_application.uses(mainframe_business_system, "Uses", technology="XML/HTTPS")
-    #api_application.uses(email_system, "Sends e-mail using", technology="SMTP")
+    #api_application_container.uses(database, "Reads from and writes to", technology="JDBC")
+    #api_application_container.uses(mainframe_business_system, "Uses", technology="XML/HTTPS")
+    
 
 
     
@@ -234,35 +230,46 @@ def create_big_bank_workspace():
     #   components using static analysis/reflection rather than manually specifying
     #   them all
 
-    # api_application - COMPONENT
-    signin_controller = api_application.add_component(
+    # api_application_container - COMPONENTS
+    signin_controller_component = api_application_container.add_component(
         name="Sign In Controller",
         description="Allows users to sign in to the Internet Banking System.",
         technology="NestJs - TypeScript",
         id="signinController",
     )
-    single_page_application.uses(signin_controller, "Makes API calls to", "JSON/HTTPS")
-    mobile_app.uses(signin_controller, "Makes API calls to", "JSON/HTTPS")
+    single_page_application.uses(signin_controller_component, "Makes API calls to", "JSON/HTTPS")
+    mobile_app.uses(signin_controller_component, "Makes API calls to", "JSON/HTTPS")
 
-    reset_password_controller = api_application.add_component(
+    reset_password_controller_component = api_application_container.add_component(
         name="Reset Password Controller",
         description="Allows users to reset their passwords with a single use URL.",
         technology="NestJs - TypeScript",
         id="resetPasswordController",
     )
-    single_page_application.uses(reset_password_controller, "Makes API calls to", "JSON/HTTPS")
-    mobile_app.uses(reset_password_controller, "Makes API calls to", "JSON/HTTPS")
+    single_page_application.uses(reset_password_controller_component, "Makes API calls to", "JSON/HTTPS")
+    mobile_app.uses(reset_password_controller_component, "Makes API calls to", "JSON/HTTPS")
 
-    security_component = api_application.add_component(
+    email_component = api_application_container.add_component(
+        name="E-mail Component",
+        description="Sends e-mails to users.",
+        technology="NestJs - TypeScript",
+        id="emailComponent",
+    )
+    email_component.uses(email_system, "Sends e-mail using", technology="SMTP")
+    reset_password_controller_component.uses(email_component, "Uses")
+
+    security_component = api_application_container.add_component(
         name="Security Component",
-        description="Provides functionality related to signing in, changing passwords, "
-        "etc.",
+        description="Provides functionality related to signing in, changing passwords, etc.",
         technology="NestJs - TypeScript, GoogleAuth",
         id="securityComponent",
     )
-
+    security_component.uses(database, "Reads from and writes to", "JDBC")
+    signin_controller_component.uses(security_component, "Uses")
+    reset_password_controller_component.uses(security_component, "Uses")
+    
     """
-    accounts_summary_controller = api_application.add_component(
+    accounts_summary_controller = api_application_container.add_component(
         name="Accounts Summary Controller",
         description="Provides postulantes with a summary of their bank accounts.",
         technology="Spring MVC Rest Controller",
@@ -270,39 +277,40 @@ def create_big_bank_workspace():
     )
     
 
-    mainframe_business_systemFacade = api_application.add_component(
+    mainframe_business_systemFacade = api_application_container.add_component(
         name="Mainframe Banking System Facade",
         description="A facade onto the mainframe banking system.",
         technology="Spring Bean",
         id="mainframeBankingSystemFacade",
     )
     """
-    email_component = api_application.add_component(
-        name="E-mail Component",
-        description="Sends e-mails to users.",
-        technology="NestJs - TypeScript",
-        id="emailComponent",
-    )
     
-           
-
-    signin_controller.uses(security_component, "Uses")
-    #accounts_summary_controller.uses(mainframe_business_systemFacade, "Uses")
-    reset_password_controller.uses(security_component, "Uses")
-    reset_password_controller.uses(email_component, "Uses")
-    security_component.uses(database, "Reads from and writes to", "JDBC")
-    #mainframe_business_systemFacade.uses(mainframe_business_system, "Uses", "XML/HTTPS")
-    email_component.uses(email_system, "Sends e-mail using")
-
-    # postulante_context - COMPONENT
-    postulante_controller = postulante_context.add_component(
+    # postulante_context_container - COMPONENTS
+    postulante_controller_component = postulante_context_container.add_component(
         name="Postulante Controller",
         description="Allows users to sign in to the Internet Banking System.",
         technology="NestJs - TypeScript",
-        id="postulanteController",
+        id="postulanteControllerComponent",
     )
-    #single_page_application.uses(signin_controller, "Makes API calls to", "JSON/HTTPS")
-    #mobile_app.uses(signin_controller, "Makes API calls to", "JSON/HTTPS")
+    #postulante_controller_component.tags.add(Tags.COMPONENT)
+    api_application_container.uses(postulante_controller_component)
+    
+    postulante_service_component = postulante_context_container.add_component(
+        name="Postulante Application Service",
+        description="Allows users to sign in to the Internet Banking System.",
+        technology="NestJs - TypeScript",
+        id="postulanteServiceComponent",
+    )
+    postulante_controller_component.uses(postulante_service_component)
+
+    postulante_repository_component = postulante_context_container.add_component(
+        name="Postulante Repository",
+        description="Allows users to sign in to the Internet Banking System.",
+        technology="NestJs - TypeScript",
+        id="postulanteRepository",
+    )
+    postulante_repository_component.uses(database)
+    postulante_service_component.uses(postulante_repository_component)
 
     """
     # TODO:!
@@ -327,7 +335,7 @@ def create_big_bank_workspace():
         properties={"Xmx": "512M", "Xms": "1024M", "Java Version": "8"},
     )
     apache_tomcat.add_container(web_application)
-    apache_tomcat.add_container(api_application)
+    apache_tomcat.add_container(api_application_container)
 
     developer_laptop.add_deployment_node(
         "Docker - Database Server", "A Docker container.", "Docker"
@@ -388,7 +396,7 @@ def create_big_bank_workspace():
         "Apache Tomcat 8.x",
         instances=1,
         properties={"Xmx": "512M", "Xms": "1024M", "Java Version": "8"},
-    ).add_container(api_application)
+    ).add_container(api_application_container)
 
     primary_database_server = big_bank_data_center.add_deployment_node(
         "bigbank-db01",
@@ -455,17 +463,28 @@ def create_big_bank_workspace():
     container_view.add(email_system)
     container_view.paper_size = PaperSize.A4_Landscape
     
-    component_view = views.create_component_view(
-        container=api_application,
+    component_apiApplication_view = views.create_component_view(
+        container=api_application_container,
         key="Components",
         description="The component diagram for the API Application.",
     )
-    component_view.add(mobile_app)
-    component_view.add(single_page_application)
-    component_view.add(database)
-    component_view.add_all_components()
-    component_view.add(email_system)
-    component_view.paper_size = PaperSize.A4_Landscape
+    component_apiApplication_view.add(mobile_app)
+    component_apiApplication_view.add(single_page_application)
+    component_apiApplication_view.add(database)
+    component_apiApplication_view.add_all_components()
+    component_apiApplication_view.add(email_system)
+    component_apiApplication_view.paper_size = PaperSize.A4_Landscape
+
+
+    component_postulanteContext_view = views.create_component_view(
+        container=postulante_context_container,
+        key="Components1",
+        description="The component diagram for the API Application.",
+    )
+    component_postulanteContext_view.add(api_application_container)
+    component_postulanteContext_view.add(database)
+    component_postulanteContext_view.add_all_components()
+    component_postulanteContext_view.paper_size = PaperSize.A4_Landscape
     """
     # systemLandscapeView.AddAnimation(sistema_contratacion_personal, postulante,
     #   mainframe_business_system, emailSystem)
@@ -491,15 +510,15 @@ def create_big_bank_workspace():
     # componentView.AddAnimation(resetPasswordController, emailComponent, database)
 
     dynamic_view = views.create_dynamic_view(
-        element=api_application,
+        element=api_application_container,
         key="SignIn",
         description="Summarises how the sign in feature works in the single-page application.",
     )
     dynamic_view.add(
-        single_page_application, signin_controller, "Submits credentials to"
+        single_page_application, signin_controller_component, "Submits credentials to"
     )
     dynamic_view.add(
-        signin_controller, security_component, "Calls isAuthenticated() on"
+        signin_controller_component, security_component, "Calls isAuthenticated() on"
     )
     dynamic_view.add(
         security_component, database, "select * from users where username = ?"
@@ -551,13 +570,12 @@ def create_big_bank_workspace():
 from structurizr import StructurizrClient, StructurizrClientSettings
 
 if __name__ == "__main__":
-    print("ddd")
-    logging.basicConfig(level="INFO")
+    #logging.basicConfig(level="INFO")
     workspace = main()
     settings = StructurizrClientSettings(
-	workspace_id=70821,
-	api_key='53a88814-3283-4774-ada2-80b4ec1fcfc9',
-	api_secret='55e7266e-1dc3-4117-a494-f856bdd072e3',
+        workspace_id=70821,
+        api_key='53a88814-3283-4774-ada2-80b4ec1fcfc9',
+        api_secret='55e7266e-1dc3-4117-a494-f856bdd072e3',
     )
     client = StructurizrClient(settings=settings)
     
