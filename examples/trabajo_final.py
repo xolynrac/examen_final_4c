@@ -268,22 +268,40 @@ def create_big_bank_workspace():
     signin_controller_component.uses(security_component, "Uses")
     reset_password_controller_component.uses(security_component, "Uses")
     
-    """
-    accounts_summary_controller = api_application_container.add_component(
-        name="Accounts Summary Controller",
-        description="Provides postulantes with a summary of their bank accounts.",
-        technology="Spring MVC Rest Controller",
-        id="accountsSummaryController",
+    #convocatoria_context_container - COMPONENTS
+    convocatoria_controller_component = convocatoria_context_container.add_component(
+        name="Convocatoria Controller",
+        description="Allows users to sign in to the Internet Banking System.",
+        technology="NestJs - TypeScript",
+        id="convocatoriaControllerComponent",
     )
+    api_application_container.uses(convocatoria_controller_component)
     
-
-    mainframe_business_systemFacade = api_application_container.add_component(
-        name="Mainframe Banking System Facade",
-        description="A facade onto the mainframe banking system.",
-        technology="Spring Bean",
-        id="mainframeBankingSystemFacade",
+    convocatoria_service_component = convocatoria_context_container.add_component(
+        name="Convocatoria Application Service",
+        description="Allows users to sign in to the Internet Banking System.",
+        technology="NestJs - TypeScript",
+        id="convocatoriaServiceComponent",
     )
-    """
+    convocatoria_controller_component.uses(convocatoria_service_component)
+
+    convocatoria_repository_component = convocatoria_context_container.add_component(
+        name="Convocatoria Repository",
+        description="Allows users to sign in to the Internet Banking System.",
+        technology="NestJs - TypeScript",
+        id="convocatoriaRepository",
+    )
+    convocatoria_repository_component.uses(database)
+    convocatoria_service_component.uses(convocatoria_repository_component)
+
+    convocatoria_query_component = convocatoria_context_container.add_component(
+        name="Convocatoria Query",
+        description="Allows users to sign in to the Internet Banking System.",
+        technology="NestJs - TypeScript",
+        id="convocatoriaQuery",
+    )
+    convocatoria_query_component.uses(database)
+    convocatoria_controller_component.uses(convocatoria_query_component)
     
     # postulante_context_container - COMPONENTS
     postulante_controller_component = postulante_context_container.add_component(
@@ -292,7 +310,6 @@ def create_big_bank_workspace():
         technology="NestJs - TypeScript",
         id="postulanteControllerComponent",
     )
-    #postulante_controller_component.tags.add(Tags.COMPONENT)
     api_application_container.uses(postulante_controller_component)
     
     postulante_service_component = postulante_context_container.add_component(
@@ -311,6 +328,50 @@ def create_big_bank_workspace():
     )
     postulante_repository_component.uses(database)
     postulante_service_component.uses(postulante_repository_component)
+
+    postulante_query_component = postulante_context_container.add_component(
+        name="Postulante Query",
+        description="Allows users to sign in to the Internet Banking System.",
+        technology="NestJs - TypeScript",
+        id="postulanteQuery",
+    )
+    postulante_query_component.uses(database)
+    postulante_controller_component.uses(postulante_query_component)
+
+    # evaluaciones_context_container - COMPONENTS
+    evaluaciones_controller_component = evaluaciones_context_container.add_component(
+        name="Evaluaciones Controller",
+        description="Allows users to sign in to the Internet Banking System.",
+        technology="NestJs - TypeScript",
+        id="evaluacionesControllerComponent",
+    )
+    api_application_container.uses(evaluaciones_controller_component)
+    
+    evaluaciones_service_component = evaluaciones_context_container.add_component(
+        name="Evaluaciones Application Service",
+        description="Allows users to sign in to the Internet Banking System.",
+        technology="NestJs - TypeScript",
+        id="evaluacionesServiceComponent",
+    )
+    evaluaciones_controller_component.uses(evaluaciones_service_component)
+
+    evaluaciones_repository_component = evaluaciones_context_container.add_component(
+        name="Evaluaciones Repository",
+        description="Allows users to sign in to the Internet Banking System.",
+        technology="NestJs - TypeScript",
+        id="evaluacionesRepository",
+    )
+    evaluaciones_repository_component.uses(database)
+    evaluaciones_service_component.uses(evaluaciones_repository_component)
+
+    evaluaciones_query_component = evaluaciones_context_container.add_component(
+        name="Evaluaciones Query",
+        description="Allows users to sign in to the Internet Banking System.",
+        technology="NestJs - TypeScript",
+        id="evaluacionesQuery",
+    )
+    evaluaciones_query_component.uses(database)
+    evaluaciones_controller_component.uses(evaluaciones_query_component)
 
     """
     # TODO:!
@@ -475,16 +536,37 @@ def create_big_bank_workspace():
     component_apiApplication_view.add(email_system)
     component_apiApplication_view.paper_size = PaperSize.A4_Landscape
 
+    component_convocatoriaContext_view = views.create_component_view(
+        container=convocatoria_context_container,
+        key="Components1",
+        description="Diagrama de componentes del Bounded Context de Convocatoria.",
+    )
+    component_convocatoriaContext_view.add(api_application_container)
+    component_convocatoriaContext_view.add(database)
+    component_convocatoriaContext_view.add_all_components()
+    component_convocatoriaContext_view.paper_size = PaperSize.A4_Landscape
 
     component_postulanteContext_view = views.create_component_view(
         container=postulante_context_container,
-        key="Components1",
-        description="The component diagram for the API Application.",
+        key="Components2",
+        description="Diagrama de componentes del Bounded Context de Postulantes.",
     )
     component_postulanteContext_view.add(api_application_container)
     component_postulanteContext_view.add(database)
     component_postulanteContext_view.add_all_components()
     component_postulanteContext_view.paper_size = PaperSize.A4_Landscape
+
+    component_evaluacionesContext_view = views.create_component_view(
+        container=evaluaciones_context_container,
+        key="Components3",
+        description="Diagrama de componentes del Bounded Context de Evaluaciones.",
+    )
+    component_evaluacionesContext_view.add(api_application_container)
+    component_evaluacionesContext_view.add(database)
+    component_evaluacionesContext_view.add_all_components()
+    component_evaluacionesContext_view.paper_size = PaperSize.A4_Landscape
+
+
     """
     # systemLandscapeView.AddAnimation(sistema_contratacion_personal, postulante,
     #   mainframe_business_system, emailSystem)
