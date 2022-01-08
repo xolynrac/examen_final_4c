@@ -37,9 +37,9 @@ def create_big_bank_workspace():
     """Create the big bank example."""
 
     workspace = Workspace(
-        name="SCP v1.0",
+        name="SCV",
         description=(
-            "Sistema de Contatacion de Personal v1.0 "
+            "Sistema de Clinica Veterinaria"
         ),
     )
 
@@ -54,170 +54,203 @@ def create_big_bank_workspace():
     model = workspace.model
     views = workspace.views
 
-    model.enterprise = Enterprise(name="Open Solutions -  Business & Technologies")
+    model.enterprise = Enterprise(name="Veterinaria Mi Mascota Feliz")
 
     # people and software systems
-    postulante = model.add_person(
+    cliente = model.add_person(
         location=Location.External,
-        name="Postulante",
-        description="Persona para que intenta alcanzar una puesto de tabajo y apertura una cuenta temporal.",
-        id="postulante",
+        name="Cliente",
+        description="Persona dueña o responsable de una mascota.",
+        id="cliente",
     )
 
     jefe_rrh = model.add_person(
         location=Location.Internal,
         name="Jefatura de recursos humanos",
-        description="El decisor de generacion de puestos de trabajo y la inicializacion de una nueva convocatoria",
+        description="La persona de gestiona las cargas horarias de los personal_medicos",
         id="jefeRrh",
     )
     jefe_rrh.tags.add(business_staff_tag)
-    #postulante.interacts_with(
+    #cliente.interacts_with(
     #    jefe_rrh, "Asks questions to", technology="Telephone"
     #)
 
-    comite_evaluador = model.add_person(
+    personal_medico = model.add_person(
         location=Location.Internal,
-        name="Comite Evaluador",
-        description="Evalua a los postulantes de la convocatoria",
-        id="comiteEvaluador",
+        name="personal_medico",
+        description="Personal Medico y Personal Tecnico en veterinaria",
+        id="personalMedico",
     )
-    comite_evaluador.tags.add(business_staff_tag)
+    personal_medico.tags.add(business_staff_tag)
 
-    sistema_contratacion_personal = model.add_software_system(
+    sistema_gestion_citas_context_container = model.add_software_system(
         location=Location.Internal,
-        name="Sistema de contratacion",
+        name="Sistema de Clinica Veterinaria",
         description=(
-            "Permite la publicacion de una convocatoria, registro de postulantes y evaluacion de los mismos"
+            "Sistema de Gestion de atencioniones Veterinarias"
         ),
-        id="sistemaContratacionPersonal",
+        id="sistemaGestionCitasMedicas",
     )
-    postulante.uses(
-        sistema_contratacion_personal, "Se registra mediante una cuenta temporal. Rinde las evaluaciones"
+
+    cliente.uses(
+        sistema_gestion_citas_context_container, "Agenda una cita con su medico pefrerido"
     )
-    jefe_rrh.uses(sistema_contratacion_personal, "Uses")
-    comite_evaluador.uses(sistema_contratacion_personal, "Uses")
+    jefe_rrh.uses(sistema_gestion_citas_context_container, "Registra la carga horario del personal medico")
+    personal_medico.uses(sistema_gestion_citas_context_container, "Consulta su carga horaria. Registra el diagnostico y recetas")
     
-    mainframe_business_system = model.add_software_system(
-        location=Location.Internal,
-        name="Mainframe Business System",
-        description=(
-            "Sistema transacional de la empresa. Aca tambien se registra los postulantes aceptados como empleados "
-        ),
-        id="mainframe",
-    )
-    mainframe_business_system.tags.add(existing_system_tag)
-    sistema_contratacion_personal.uses(
-        mainframe_business_system,
-        "Registra al nuevo personal",
-    )
-    
+   
+       
     email_system = model.add_software_system(
-        location=Location.Internal,
-        name="Sistema de correos",
-        description="Sistema de correos con Squirrelmail",
+        location=Location.External,
+        name="Gmail",
+        description="Gmail",
         id="email",
     )
     email_system.tags.add(existing_system_tag)
     email_system.delivers(
-        destination=postulante,
+        destination=cliente,
         description="Sends e-mails to",
     )
-    sistema_contratacion_personal.uses(
+    sistema_gestion_citas_context_container.uses(
         destination=email_system,
         description="Sends e-mail using",
     )
+
+    whatsapp_system = model.add_software_system(
+        location=Location.External,
+        name="Whatsapp",
+        description="Whatsapp",
+        id="whatsappSystem",
+    )
+    whatsapp_system.tags.add(existing_system_tag)
+    whatsapp_system.delivers(
+        destination=cliente,
+        description="Envia mensajes de texto",
+    )
+    sistema_gestion_citas_context_container.uses(
+        destination=whatsapp_system,
+        description="Envia mensajes de texto",
+    )
      
-    portal = model.add_software_system(
-        location=Location.Internal,
+    # containers
+    portal = sistema_gestion_citas_context_container.add_container(
         name="Portal Institucional",
         description="Web Estatica con informacion de la Organizacion.",
+        technology = "Flutter",
         id="portal",
     )
-    portal.tags.add(existing_system_tag)
-    #portal.uses(mainframe_business_system, "Uses")
-    postulante.uses(portal, "Busca oportunidades de trabajo")
-    sistema_contratacion_personal.uses(portal, "Uses")
-    
-    # containers
-    single_page_application = sistema_contratacion_personal.add_container(
+    portal.tags.add(web_browser_tag)
+    cliente.uses(portal, "")
+    sistema_gestion_citas_context_container.uses(portal, "Publica Promociones")
+
+    single_page_application = sistema_gestion_citas_context_container.add_container(
         "Single-Page Application",
-        "Provee la funcionalidad para los postulantes y los business workers.",
-        "Flutter application",
+        "Provee la funcionalidad para reservar cita medica, visualizar historial medico.",
+        "Flutter",
         id="singlePageApplication",
     )
     single_page_application.tags.add(web_browser_tag)
-    postulante.uses(single_page_application, "Uses", technology="JSON/HTTPS")
+    cliente.uses(single_page_application, "Uses", technology="JSON/HTTPS")
     jefe_rrh.uses(single_page_application, "Uses", technology="JSON/HTTPS")
-    comite_evaluador.uses(single_page_application, "Uses", technology="JSON/HTTPS")
+    personal_medico.uses(single_page_application, "Uses", technology="JSON/HTTPS")
 
-    mobile_app = sistema_contratacion_personal.add_container(
+    mobile_app = sistema_gestion_citas_context_container.add_container(
         "Mobile App",
-        "Provee funcionalidad de avisos y comunicacion hacia los postulantes.",
-        "Flutter mobile application",
+        "Provee funcionalidad de avisos y comunicacion hacia los clientes.",
+        "Flutter",
         id="mobileApp",
     )
     mobile_app.tags.add(mobile_app_tag)
-    postulante.uses(mobile_app, "Uses")
+    cliente.uses(mobile_app, "Uses")
 
     
-    api_application_container = sistema_contratacion_personal.add_container(
-        "API Application",
+    api_application_container = sistema_gestion_citas_context_container.add_container(
+        "API Gateway",
         "Provee los EndPoints via a JSON/HTTPS API.",
-        "NestJs - TypeScript",
+        "NestJs",
         id="apiApplication",
     )
     api_application_container.uses(email_system, "Sends e-mail using", technology="SMTP")
+    api_application_container.uses(whatsapp_system, "Envia mensajes", technology="JSON/HTTPS")
     single_page_application.uses(api_application_container, "Makes API calls to" "JSON/HTTPS")
     mobile_app.uses(api_application_container, "Makes API calls to" "JSON/HTTPS")
+    portal.uses(api_application_container, "Makes API calls to" "JSON/HTTPS")
 
-    postulante_context_container = sistema_contratacion_personal.add_container(
-        "Contexto Postulante",
-        "Provee las funcionalidades para manejar el agregado Postulante",
-        "Java and Spring MVC",
-        id="postulanteContext",
+    cliente_context_container = sistema_gestion_citas_context_container.add_container(
+        "Contexto cliente",
+        "Provee las funcionalidades para manejar el agregado cliente",
+        "NestJs",
+        id="clienteContext",
     )
-    postulante_context_container.tags.add(bounded_context_tag)
-    api_application_container.uses(postulante_context_container, "")
+    cliente_context_container.tags.add(bounded_context_tag)
+    api_application_container.uses(cliente_context_container, "")
 
-    convocatoria_context_container = sistema_contratacion_personal.add_container(
-        "Contexto Convocatoria",
-        "Provee las funcionalidades para manejar el agregado Convoocatoria",
-        "Java and Spring MVC",
-        id="convocatoriaContext",
+    paciente_context_container = sistema_gestion_citas_context_container.add_container(
+        "Contexto Paciente",
+        "Provee las funcionalidades para manejar el agregado Paciente",
+        "NestJs",
+        id="pacienteContext",
     )
-    convocatoria_context_container.tags.add(bounded_context_tag)
-    api_application_container.uses(convocatoria_context_container, "")
+    paciente_context_container.tags.add(bounded_context_tag)
+    api_application_container.uses(paciente_context_container, "")
 
-    evaluaciones_context_container = sistema_contratacion_personal.add_container(
-        "Contexto Evaliaciones",
-        "Provee las funcionalidades para manejar el agregado Evaluaciones",
-        "Java and Spring MVC",
-        id="evaluacionesContext",
+    comprobante_context_container = sistema_gestion_citas_context_container.add_container(
+        "Contexto Comprobante",
+        "Provee las funcionalidades para manejar el agregado Comprobante",
+        "NestJs",
+        id="comprobanteContext",
     )
-    evaluaciones_context_container.tags.add(bounded_context_tag)
-    evaluaciones_context_container.uses(
-        mainframe_business_system,
-        "Registra al nuevo personal",
-    )
-    api_application_container.uses(evaluaciones_context_container, "")
+    comprobante_context_container.tags.add(bounded_context_tag)
+    api_application_container.uses(comprobante_context_container, "")
 
-    database = sistema_contratacion_personal.add_container(
+    cargahoraria_context_container = sistema_gestion_citas_context_container.add_container(
+        "Contexto Carga Horaria",
+        "Provee las funcionalidades para manejar el agregado Carga Horaria",
+        "NestJs",
+        id="cargahorariaContext",
+    )
+    cargahoraria_context_container.tags.add(bounded_context_tag)
+    api_application_container.uses(cargahoraria_context_container, "")
+
+    citas_context_container = sistema_gestion_citas_context_container.add_container(
+        "Contexto Citas Medicas",
+        "Provee las funcionalidades para manejar el agregado Citas a medicas",
+        "NestJs",
+        id="citasMedicas",
+    )
+    citas_context_container.tags.add(bounded_context_tag)
+    api_application_container.uses(citas_context_container, "")
+
+    cirugias_context_container = sistema_gestion_citas_context_container.add_container(
+        "Contexto Cirugia Medicas",
+        "Provee las funcionalidades para manejar el agregado Cirugia Medicas",
+        "NestJs",
+        id="cirugiasMedicas",
+    )
+    cirugias_context_container.tags.add(bounded_context_tag)
+    api_application_container.uses(cirugias_context_container, "")
+
+    database = sistema_gestion_citas_context_container.add_container(
         "Database",
         "Stores user registration information, hashed authentication credentials, "
         "access logs, etc.",
         "Relational Database Schema",
         id="database",
     )
+    
     database.tags.add(database_tag)
-    postulante_context_container.uses(database, "Guarda los postulantes")
-    convocatoria_context_container.uses(database , "Guarda las convocatorias")
-    evaluaciones_context_container.uses(database, "Guarda las evaluaciones")
+    cliente_context_container.uses(database, "Guarda los clientes")
+    paciente_context_container.uses(database , "Guarda los datos de los pacientes")
+    citas_context_container.uses(database, "Guarda los datos de la consulta, diagnistico y prescipcion")
+    cirugias_context_container.uses(database, "Guarda los datos de la cirugia")
+    comprobante_context_container.uses(database, "Guarda los datos de la cirugia")
+    cargahoraria_context_container.uses(database, "Guarda los datos de la cirugia")
 
 
     
     
     #web_application.uses(
-    #    single_page_application, "Delivers to the postulantes web browser"
+    #    single_page_application, "Delivers to the clientes web browser"
     #)
     #api_application_container.uses(database, "Reads from and writes to", technology="JDBC")
     #api_application_container.uses(mainframe_business_system, "Uses", technology="XML/HTTPS")
@@ -268,8 +301,8 @@ def create_big_bank_workspace():
     signin_controller_component.uses(security_component, "Uses")
     reset_password_controller_component.uses(security_component, "Uses")
     
-    #convocatoria_context_container - COMPONENTS
-    convocatoria_controller_component = convocatoria_context_container.add_component(
+    #paciente_context_container - COMPONENTS
+    convocatoria_controller_component = paciente_context_container.add_component(
         name="Convocatoria Controller",
         description="Allows users to sign in to the Internet Banking System.",
         technology="NestJs - TypeScript",
@@ -277,7 +310,7 @@ def create_big_bank_workspace():
     )
     api_application_container.uses(convocatoria_controller_component)
     
-    convocatoria_service_component = convocatoria_context_container.add_component(
+    convocatoria_service_component = paciente_context_container.add_component(
         name="Convocatoria Application Service",
         description="Allows users to sign in to the Internet Banking System.",
         technology="NestJs - TypeScript",
@@ -285,7 +318,7 @@ def create_big_bank_workspace():
     )
     convocatoria_controller_component.uses(convocatoria_service_component)
 
-    convocatoria_repository_component = convocatoria_context_container.add_component(
+    convocatoria_repository_component = paciente_context_container.add_component(
         name="Convocatoria Repository",
         description="Allows users to sign in to the Internet Banking System.",
         technology="NestJs - TypeScript",
@@ -294,7 +327,7 @@ def create_big_bank_workspace():
     convocatoria_repository_component.uses(database)
     convocatoria_service_component.uses(convocatoria_repository_component)
 
-    convocatoria_query_component = convocatoria_context_container.add_component(
+    convocatoria_query_component = paciente_context_container.add_component(
         name="Convocatoria Query",
         description="Allows users to sign in to the Internet Banking System.",
         technology="NestJs - TypeScript",
@@ -303,43 +336,43 @@ def create_big_bank_workspace():
     convocatoria_query_component.uses(database)
     convocatoria_controller_component.uses(convocatoria_query_component)
     
-    # postulante_context_container - COMPONENTS
-    postulante_controller_component = postulante_context_container.add_component(
-        name="Postulante Controller",
+    # cliente_context_container - COMPONENTS
+    cliente_controller_component = cliente_context_container.add_component(
+        name="cliente Controller",
         description="Allows users to sign in to the Internet Banking System.",
         technology="NestJs - TypeScript",
-        id="postulanteControllerComponent",
+        id="clienteControllerComponent",
     )
-    api_application_container.uses(postulante_controller_component)
+    api_application_container.uses(cliente_controller_component)
     
-    postulante_service_component = postulante_context_container.add_component(
-        name="Postulante Application Service",
+    cliente_service_component = cliente_context_container.add_component(
+        name="cliente Application Service",
         description="Allows users to sign in to the Internet Banking System.",
         technology="NestJs - TypeScript",
-        id="postulanteServiceComponent",
+        id="clienteServiceComponent",
     )
-    postulante_controller_component.uses(postulante_service_component)
+    cliente_controller_component.uses(cliente_service_component)
 
-    postulante_repository_component = postulante_context_container.add_component(
-        name="Postulante Repository",
+    cliente_repository_component = cliente_context_container.add_component(
+        name="cliente Repository",
         description="Allows users to sign in to the Internet Banking System.",
         technology="NestJs - TypeScript",
-        id="postulanteRepository",
+        id="clienteRepository",
     )
-    postulante_repository_component.uses(database)
-    postulante_service_component.uses(postulante_repository_component)
+    cliente_repository_component.uses(database)
+    cliente_service_component.uses(cliente_repository_component)
 
-    postulante_query_component = postulante_context_container.add_component(
-        name="Postulante Query",
+    cliente_query_component = cliente_context_container.add_component(
+        name="cliente Query",
         description="Allows users to sign in to the Internet Banking System.",
         technology="NestJs - TypeScript",
-        id="postulanteQuery",
+        id="clienteQuery",
     )
-    postulante_query_component.uses(database)
-    postulante_controller_component.uses(postulante_query_component)
+    cliente_query_component.uses(database)
+    cliente_controller_component.uses(cliente_query_component)
 
-    # evaluaciones_context_container - COMPONENTS
-    evaluaciones_controller_component = evaluaciones_context_container.add_component(
+    # citas_context_container - COMPONENTS
+    evaluaciones_controller_component = citas_context_container.add_component(
         name="Evaluaciones Controller",
         description="Allows users to sign in to the Internet Banking System.",
         technology="NestJs - TypeScript",
@@ -347,7 +380,7 @@ def create_big_bank_workspace():
     )
     api_application_container.uses(evaluaciones_controller_component)
     
-    evaluaciones_service_component = evaluaciones_context_container.add_component(
+    evaluaciones_service_component = citas_context_container.add_component(
         name="Evaluaciones Application Service",
         description="Allows users to sign in to the Internet Banking System.",
         technology="NestJs - TypeScript",
@@ -355,7 +388,7 @@ def create_big_bank_workspace():
     )
     evaluaciones_controller_component.uses(evaluaciones_service_component)
 
-    evaluaciones_repository_component = evaluaciones_context_container.add_component(
+    evaluaciones_repository_component = citas_context_container.add_component(
         name="Evaluaciones Repository",
         description="Allows users to sign in to the Internet Banking System.",
         technology="NestJs - TypeScript",
@@ -364,7 +397,7 @@ def create_big_bank_workspace():
     evaluaciones_repository_component.uses(database)
     evaluaciones_service_component.uses(evaluaciones_repository_component)
 
-    evaluaciones_query_component = evaluaciones_context_container.add_component(
+    evaluaciones_query_component = citas_context_container.add_component(
         name="Evaluaciones Query",
         description="Allows users to sign in to the Internet Banking System.",
         technology="NestJs - TypeScript",
@@ -410,18 +443,18 @@ def create_big_bank_workspace():
         "Web Browser", "", "Chrome, Firefox, Safari, or Edge"
     ).add_container(single_page_application)
 
-    postulante_mobile_device = model.add_deployment_node(
+    cliente_mobile_device = model.add_deployment_node(
         "Customer's mobile device", "", "Apple iOS or Android", environment="Live"
     )
-    postulante_mobile_device.add_container(mobile_app)
+    cliente_mobile_device.add_container(mobile_app)
 
-    postulante_computer = model.add_deployment_node(
+    cliente_computer = model.add_deployment_node(
         "Customer's computer",
         "",
         "Microsoft Windows or Apple macOS",
         environment="Live",
     )
-    postulante_computer.add_deployment_node(
+    cliente_computer.add_deployment_node(
         "Web Browser", "", "Chrome, Firefox, Safari, or Edge"
     ).add_container(single_page_application)
 
@@ -496,89 +529,89 @@ def create_big_bank_workspace():
     # views/diagrams
     system_landscape_view = views.create_system_landscape_view(
         key="SystemLandscape",
-        description="Vision global del nuevo Sistema de Contratacion de Personal",
+        description="Vision global del nuevo Sistema de Clinica Veterinaria",
     )
     system_landscape_view.add_all_elements()
     system_landscape_view.paper_size = PaperSize.A4_Landscape
     
     system_context_view = views.create_system_context_view(
-        software_system=sistema_contratacion_personal,
+        software_system=sistema_gestion_citas_context_container,
         key="SystemContext",
-        description="The system context diagram for the Internet Banking System.",
+        description="Diagrama de Contexto del nuevo Sistema de Clinica Veterinaria.",
     )
     system_context_view.enterprise_boundary_visible = True
     #system_context_view.add_all_elements()
-    system_context_view.add_nearest_neighbours(sistema_contratacion_personal)
+    system_context_view.add_nearest_neighbours(sistema_gestion_citas_context_container)
     system_context_view.paper_size = PaperSize.A4_Landscape
     
     container_view = views.create_container_view(
-        software_system=sistema_contratacion_personal,
+        software_system=sistema_gestion_citas_context_container,
         key="Containers",
-        description="The container diagram for the Sistema de Contratacion de Personal.",
+        description="Diagrama de contenedores.",
     )
-    container_view.add(postulante)
+    container_view.add(cliente)
     container_view.add(jefe_rrh)
-    container_view.add(comite_evaluador)
+    container_view.add(personal_medico)
     container_view.add_all_containers()
-    container_view.add(mainframe_business_system)
     container_view.add(email_system)
-    container_view.paper_size = PaperSize.A4_Landscape
+    container_view.add(whatsapp_system)
+    container_view.paper_size = PaperSize.A3_Landscape
     
-    component_apiApplication_view = views.create_component_view(
-        container=api_application_container,
-        key="Components",
-        description="The component diagram for the API Application.",
-    )
-    component_apiApplication_view.add(mobile_app)
-    component_apiApplication_view.add(single_page_application)
-    component_apiApplication_view.add(database)
-    component_apiApplication_view.add_all_components()
-    component_apiApplication_view.add(email_system)
-    component_apiApplication_view.paper_size = PaperSize.A4_Landscape
+    # component_apiApplication_view = views.create_component_view(
+    #     container=api_application_container,
+    #     key="Components",
+    #     description="The component diagram for the API Application.",
+    # )
+    # component_apiApplication_view.add(mobile_app)
+    # component_apiApplication_view.add(single_page_application)
+    # component_apiApplication_view.add(database)
+    # component_apiApplication_view.add_all_components()
+    # component_apiApplication_view.add(email_system)
+    # component_apiApplication_view.paper_size = PaperSize.A4_Landscape
 
-    component_convocatoriaContext_view = views.create_component_view(
-        container=convocatoria_context_container,
-        key="Components1",
-        description="Diagrama de componentes del Bounded Context de Convocatoria.",
-    )
-    component_convocatoriaContext_view.add(api_application_container)
-    component_convocatoriaContext_view.add(database)
-    component_convocatoriaContext_view.add_all_components()
-    component_convocatoriaContext_view.paper_size = PaperSize.A4_Landscape
+    # component_convocatoriaContext_view = views.create_component_view(
+    #     container=paciente_context_container,
+    #     key="Components1",
+    #     description="Diagrama de componentes del Bounded Context de Convocatoria.",
+    # )
+    # component_convocatoriaContext_view.add(api_application_container)
+    # component_convocatoriaContext_view.add(database)
+    # component_convocatoriaContext_view.add_all_components()
+    # component_convocatoriaContext_view.paper_size = PaperSize.A4_Landscape
 
-    component_postulanteContext_view = views.create_component_view(
-        container=postulante_context_container,
-        key="Components2",
-        description="Diagrama de componentes del Bounded Context de Postulantes.",
-    )
-    component_postulanteContext_view.add(api_application_container)
-    component_postulanteContext_view.add(database)
-    component_postulanteContext_view.add_all_components()
-    component_postulanteContext_view.paper_size = PaperSize.A4_Landscape
+    # component_clienteContext_view = views.create_component_view(
+    #     container=cliente_context_container,
+    #     key="Components2",
+    #     description="Diagrama de componentes del Bounded Context de clientes.",
+    # )
+    # component_clienteContext_view.add(api_application_container)
+    # component_clienteContext_view.add(database)
+    # component_clienteContext_view.add_all_components()
+    # component_clienteContext_view.paper_size = PaperSize.A4_Landscape
 
-    component_evaluacionesContext_view = views.create_component_view(
-        container=evaluaciones_context_container,
-        key="Components3",
-        description="Diagrama de componentes del Bounded Context de Evaluaciones.",
-    )
-    component_evaluacionesContext_view.add(api_application_container)
-    component_evaluacionesContext_view.add(database)
-    component_evaluacionesContext_view.add_all_components()
-    component_evaluacionesContext_view.paper_size = PaperSize.A4_Landscape
+    # component_evaluacionesContext_view = views.create_component_view(
+    #     container=citas_context_container,
+    #     key="Components3",
+    #     description="Diagrama de componentes del Bounded Context de Evaluaciones.",
+    # )
+    # component_evaluacionesContext_view.add(api_application_container)
+    # component_evaluacionesContext_view.add(database)
+    # component_evaluacionesContext_view.add_all_components()
+    # component_evaluacionesContext_view.paper_size = PaperSize.A4_Landscape
 
 
     """
-    # systemLandscapeView.AddAnimation(sistema_contratacion_personal, postulante,
+    # systemLandscapeView.AddAnimation(sistema_gestion_citas_context_container, cliente,
     #   mainframe_business_system, emailSystem)
     # systemLandscapeView.AddAnimation(portal)
-    # systemLandscapeView.AddAnimation(postulanteServiceStaff, comite_evaluador)
+    # systemLandscapeView.AddAnimation(clienteServiceStaff, personal_medico)
 
-    # systemContextView.AddAnimation(sistema_contratacion_personal)
-    # systemContextView.AddAnimation(postulante)
+    # systemContextView.AddAnimation(sistema_gestion_citas_context_container)
+    # systemContextView.AddAnimation(cliente)
     # systemContextView.AddAnimation(mainframe_business_system)
     # systemContextView.AddAnimation(emailSystem)
 
-    # containerView.AddAnimation(postulante, mainframe_business_system, emailSystem)
+    # containerView.AddAnimation(cliente, mainframe_business_system, emailSystem)
     # containerView.AddAnimation(webApplication)
     # containerView.AddAnimation(singlePageApplication)
     # containerView.AddAnimation(mobile_app)
@@ -608,7 +641,7 @@ def create_big_bank_workspace():
     dynamic_view.paper_size = PaperSize.A5_Landscape
 
     development_deployment_view = views.create_deployment_view(
-        software_system=sistema_contratacion_personal,
+        software_system=sistema_gestion_citas_context_container,
         key="DevelopmentDeployment",
         description="An example development deployment scenario for the Internet "
         "Banking System.",
@@ -618,15 +651,15 @@ def create_big_bank_workspace():
     development_deployment_view.paper_size = PaperSize.A5_Landscape
 
     live_deployment_view = views.create_deployment_view(
-        software_system=sistema_contratacion_personal,
+        software_system=sistema_gestion_citas_context_container,
         key="LiveDeployment",
         description="An example live deployment scenario for the Internet Banking "
         "System.",
         environment="Live",
     )
     live_deployment_view += big_bank_data_center
-    live_deployment_view += postulante_mobile_device
-    live_deployment_view += postulante_computer
+    live_deployment_view += cliente_mobile_device
+    live_deployment_view += cliente_computer
     live_deployment_view += data_replication_relationship
     live_deployment_view.paper_size = PaperSize.A5_Landscape
     """
@@ -655,9 +688,9 @@ if __name__ == "__main__":
     #logging.basicConfig(level="INFO")
     workspace = main()
     settings = StructurizrClientSettings(
-        workspace_id=70821,
-        api_key='53a88814-3283-4774-ada2-80b4ec1fcfc9',
-        api_secret='55e7266e-1dc3-4117-a494-f856bdd072e3',
+        workspace_id=70818,
+        api_key='ca5604a1-4407-42f6-9dab-9384b65c8152',
+        api_secret='aef76fda-e72c-49c4-838c-f42dd6f48379',
     )
     client = StructurizrClient(settings=settings)
     
